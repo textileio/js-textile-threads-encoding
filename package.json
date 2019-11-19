@@ -1,0 +1,61 @@
+{
+  "name": "@textile/threads-encoding",
+  "version": "0.0.1",
+  "description": "Encoding/decoding tools for Textile Threads in Typescript/Javascript.",
+  "main": "dist/index.js",
+  "browser": {
+    "./dist/crypto/node": "./dist/crypto/browser"
+  },
+  "scripts": {
+    "build": "tsc -p ./tsconfig.build.json",
+    "prepare": "npm run build",
+    "test": "jest --verbose --no-watchman",
+    "lint": "eslint --fix --ext .mjs,.js,.jsx,.ts,.tsx src",
+    "docs:build": "jsdoc -c jsdoc.json",
+    "docs:serve": "npm run docs:build && http-server docs/",
+    "docs": "npm run docs:build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/textileio/js-textile-threads-encoding.git"
+  },
+  "keywords": [
+    "ipfs",
+    "textile",
+    "dag",
+    "typescript",
+    "browser",
+    "node"
+  ],
+  "author": "Carson Farmer <carson@textile.io>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/textileio/js-textile-threads-encoding/issues"
+  },
+  "homepage": "https://github.com/textileio/js-textile-threads-encoding#readme",
+  "devDependencies": {
+    "@types/bs58": "^4.0.1",
+    "@types/jest": "^24.0.19",
+    "@types/js-base64": "^2.3.1",
+    "@types/node": "^12.7.12",
+    "@typescript-eslint/eslint-plugin": "^2.3.3",
+    "@typescript-eslint/parser": "^2.3.3",
+    "better-docs": "^1.4.2",
+    "eslint": "^6.5.1",
+    "eslint-config-prettier": "^6.4.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-prettier": "^3.1.1",
+    "jest": "^24.9.0",
+    "jest-cli": "^24.9.0",
+    "jsdoc": "^3.6.3",
+    "prettier": "^1.18.2",
+    "ts-jest": "^24.1.0",
+    "ts-loader": "^6.2.0",
+    "typescript": "^3.6.4"
+  },
+  "dependencies": {
+    "@ipld/block": "^2.0.6",
+    "bs58": "^4.0.1",
+    "js-base64": "^2.5.1"
+  }
+}
