@@ -40,17 +40,6 @@ TODO
 npm i @textile/threads-encoding
 ```
 
-### Browser
-
-```
-git checkout https://github.com/textileio/js-textile-threads-encoding.git
-cd js-textile-threads-encoding
-npm i
-npm run browser:build
-```
-
-TODO
-
 ## Usage
 
 ### Typescript
