@@ -1,68 +1,61 @@
 import Block from '@ipld/block'
 import Base58 from 'bs58'
-import { decodeBlock } from './crypto/node'
+import { decodeBlock, CodecOptions, createEvent, defaultCodecOpts } from './crypto'
+import { BaseRecord, HeaderNode, EventNode, RecordNode } from './model'
 
-// @todo: export this from js-threads-client?
-export interface LogRecord {
-  id: string
-  log_id?: string
-  thread_id: string
-  record_node?: string
-  event_node?: string
-  header_node?: string
-  body_node?: string
-}
+export { CodecOptions } from './crypto'
+export { BaseRecord } from './model'
 
-export interface HeaderNode {
-  key: Buffer
-  time: number
-}
-
-export interface EventNode {
-  header: any
-  body: any
-}
-
-export interface RecordNode {
-  sig: Buffer
-  prev: any
-  block: any
-}
-
-// @todo: create an 'encoder' static method to enable encoding in the client
-export class Record {
-  constructor(
-    private logRecord: LogRecord,
-    private followKey?: string,
-    private readKey?: string,
-    private opts: { codec: string; algo: string } = { codec: 'dag-cbor', algo: 'sha2-256' },
-  ) {}
-  static decoder(record: LogRecord, followKey?: string, readKey?: string) {
-    return new Record(record, followKey, readKey)
+export class RecordEncoder {
+  constructor(private logRecord: BaseRecord, private opts: CodecOptions = defaultCodecOpts) {}
+  /**
+   * Create new Record from existing LogRecord
+   * @param record The input LogRecord
+   * @param opts The encoding options to use when decoding the data from IPLD blocks.
+   */
+  static async decode(record: BaseRecord, opts: CodecOptions = defaultCodecOpts) {
+    return new RecordEncoder(record, opts)
   }
-  async header() {
-    if (this.readKey) {
-      if (this.logRecord.header_node) {
-        const headerNode = this.logRecord.header_node
-        const headerRaw = Buffer.from(headerNode, 'base64')
-        const headerCipher: Buffer = Block.decoder(headerRaw, this.opts.codec, this.opts.algo).decode()
-        const headerBLock = await decodeBlock(headerCipher, this.readKey)
-        const header = Block.decoder(headerBLock, this.opts.codec, this.opts.algo).decode()
-        return header as HeaderNode
-      }
-      return undefined
+  /**
+   * Create new Record from a raw input body.
+   * @param obj The input data to encode into a Record.
+   * @param readKey The required symmetric read key.
+   * @param key The optional symmetric key to use to encrypt the raw body data.
+   * @param opts The encoding options to use when encoding the data as IPLD blocks.
+   */
+  static async encode(obj: any, readKey: string, key?: string, opts: CodecOptions = defaultCodecOpts) {
+    const { body, header } = await createEvent(obj, readKey, key, opts)
+    const event = {
+      body: await body.cid(),
+      header: await header.cid(),
     }
-    throw new Error('missing read key')
+    const codedEvent = Block.encoder(event, opts.codec, opts.codec).encode()
+    const record = {
+      // eslint-disable-next-line @typescript-eslint/camelcase
+      event_node: codedEvent.toString('base64'),
+      // eslint-disable-next-line @typescript-eslint/camelcase
+      body_node: body.encode().toString('base64'),
+      // eslint-disable-next-line @typescript-eslint/camelcase
+      header_node: header.encode().toString('base64'),
+    }
+    return new RecordEncoder(record, opts)
   }
-  async body() {
-    const head = await this.header()
+  async header(readKey: string) {
+    if (this.logRecord.header_node) {
+      const headerNode = this.logRecord.header_node
+      const headerRaw = Buffer.from(headerNode, 'base64')
+      const header = await decodeBlock(headerRaw, readKey, this.opts)
+      return header as HeaderNode
+    }
+    return undefined
+  }
+  async body(readKey: string) {
+    const head = await this.header(readKey)
     if (this.logRecord.body_node && head) {
       const key = Base58.encode(head.key)
       const bodyNode = this.logRecord.body_node
       const bodyRaw = Buffer.from(bodyNode, 'base64')
-      const bodyCipher = Block.decoder(bodyRaw, this.opts.codec, this.opts.algo).decode()
-      const bodyBlock = await decodeBlock(bodyCipher, key)
-      const body = Block.decoder(bodyBlock, this.opts.codec, this.opts.algo).decode()
+      const body = await decodeBlock(bodyRaw, key, this.opts)
       return body
     }
     return undefined
@@ -71,24 +64,19 @@ export class Record {
     if (this.logRecord.event_node) {
       const eventNode = this.logRecord.event_node
       const eventRaw = Buffer.from(eventNode, 'base64')
-      // Event 'body' is not encrypted
+      // Event 'body' is not encrypted, so don't use decodeBlock
       const event = Block.decoder(eventRaw, this.opts.codec, this.opts.algo).decode()
       return event as EventNode
     }
     return undefined
   }
-  async record() {
-    if (this.followKey) {
-      if (this.logRecord.record_node) {
-        const recordNode = this.logRecord.record_node
-        const recordRaw = Buffer.from(recordNode, 'base64')
-        const recordCipher = Block.decoder(recordRaw, this.opts.codec, this.opts.algo).decode()
-        const recordBlock = await decodeBlock(recordCipher, this.followKey)
-        const record = Block.decoder(recordBlock, this.opts.codec, this.opts.algo).decode()
-        return record as RecordNode
-      }
-      return undefined
+  async record(followKey: string) {
+    if (this.logRecord.record_node) {
+      const recordNode = this.logRecord.record_node
+      const recordRaw = Buffer.from(recordNode, 'base64')
+      const record = await decodeBlock(recordRaw, followKey, this.opts)
+      return record as RecordNode
     }
-    throw new Error('missing follow key')
+    return undefined
   }
 }

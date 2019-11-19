@@ -1,10 +1,8 @@
-import { Record } from '../src'
+import { RecordEncoder } from '../src'
 import CID from 'cids'
 import Base58 from 'bs58'
 
 const input = {
-  id: 'bafyreibadtvtcmnmhmycr5lin5zz4mopnxux6ud2siwh2rsf6e5wv65hga',
-  thread_id: 'bafksrbqls2srbqc4gl6g3opw5w6pzq3rjxsvdh2ir2zn7voosdyz42i',
   record_node:
     'WLQ/rImARp9uZ2dw0tU12DgQDRyT3J/Wwj0rt7I739loFIzYPE82pjZS9tMFVrDvgXsMXU/XAn2z41E6TIqzPbM6/VkKMcru0oEe5VnEmzLRDbYOmBr9Uho7x/KbeWpXfm8GUu+viBBwktuVFz0Gm4Z74UaVwuUVQTCKim7YH/zbPM7QkhbBRQy/DQdn2rQPFRmsJAgd7Fydo4KG+icYcHT1mzilfqOm4nyUvYmQXvPLNqU1xy4=',
   event_node:
@@ -21,16 +19,28 @@ const key = '29EApHMhnc1uRsxpppSijtWzTjWLBPD6MKErUKxDpD6gK7rjbMf6fHcus4VLf'
 
 describe('Record...', () => {
   it('should decode and decrypt a log record', async () => {
-    const record = Record.decoder(input, followKey, readKey)
-    const h = await record.header()
+    const record = await RecordEncoder.decode(input)
+    const h = await record.header(readKey)
     expect(h!.key).toEqual(Base58.decode(key))
     expect(h!.time).toBeLessThan((new Date()).valueOf())
-    const b = await record.body()
+    const b = await record.body(readKey)
     expect(b.txt).toEqual('hello world')
     const e = await record.event()
     expect(e!.header).toBeInstanceOf(CID)
     expect(e!.body).toBeInstanceOf(CID)
-    const r = await record.record()
+    const r = await record.record(followKey)
     expect(r!.sig.toString('base64')).toEqual(sig)
+  })
+
+  it('should encode and encrypt a log record', async () => {
+    const record = await RecordEncoder.encode({ txt: 'hello world' }, readKey, key)
+    const h = await record.header(readKey)
+    expect(h!.key).toEqual(Base58.decode(key))
+    expect(h!.time).toBeLessThan(new Date().valueOf())
+    const b = await record.body(readKey)
+    expect(b.txt).toEqual('hello world')
+    const e = await record.event()
+    expect(e!.header).toBeInstanceOf(CID)
+    expect(e!.body).toBeInstanceOf(CID)
   })
 })
