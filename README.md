@@ -1,3 +1,5 @@
+**WARNING**: **`js-textile-threads-encoding` has been deprecated. See [`js-threads`](https://github.com/textileio/js-threads) for a complete implementation.**
+
 # Threads Encoding _(js-textile-threads-encoding)_
 
 [![Made by Textile](https://img.shields.io/badge/made%20by-Textile-informational.svg?style=flat-square)](https://textile.io)
